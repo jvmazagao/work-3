@@ -6,15 +6,16 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const connection = amqp.connect('amqp://localhost');
+const connection = amqp.connect('amqp://rabbitmq');
 const channelWrapper = connection.createChannel({ json: true });
 const processQueue = 'process_file';
 
-cron.schedule('* * * * *', async () => {
-  console.log('running a task every 2 minute');
+cron.schedule('*/10 * * * * *', async () => {
+  console.log('running a task every 10 seconds');
   await mongoose.connect(process.env.MONGO);
   const files = await File.find({ status: Status.PENDING }).limit(5).exec();
-  await files.forEach(async (file) => {
+  console.log({ files });
+  files.forEach(async (file) => {
     const {
       id, status, path, name,
     } = file;

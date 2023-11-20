@@ -1,14 +1,14 @@
 const amqp = require('amqp-connection-manager');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-
+const path = require('path');
 const { File, Status } = require('./src/domain/File');
 const { Molecule } = require('./src/domain/Molecule');
 const { Atom } = require('./src/domain/Atom');
 const { fileProcessor } = require('./src/processor/FileProcessor');
 
 dotenv.config();
-const connection = amqp.connect('amqp://localhost');
+const connection = amqp.connect('amqp://rabbitmq');
 const channelWrapper = connection.createChannel({ json: true });
 
 const queue = 'process_file';
@@ -20,9 +20,10 @@ const processor = async (message) => {
   const messageContent = JSON.parse(message.content.toString('utf8'));
 
   const { name, id: identifier } = messageContent;
-  const { title, atoms } = await fileProcessor(messageContent);
+  const folderPath = path.resolve(__dirname, 'archives');
+  const { title, atoms } = await fileProcessor({ ...messageContent, folderPath });
 
-  console.log({ file: name, log: 'Starting to process element - 3' });
+  console.log({ file: name, log: 'Starting to process element' });
 
   const storedElement = await Molecule.findById({ _id: title }).exec();
 
@@ -32,9 +33,8 @@ const processor = async (message) => {
       const mol = new Molecule({ _id: title });
       await mol.save();
       console.log({ file: name, log: 'Send to atom consumer' });
-      atoms.forEach((atom) => {
-        channelWrapper.sendToQueue(atomsQueue, { ...atom, molecule_id: title });
-      });
+      const ats = atoms.map((atom) => ({ ...atom, molecule_id: title }));
+      await channelWrapper.sendToQueue(atomsQueue, ats);
       console.log({ file: name, log: 'Element stored' });
       await File.findByIdAndUpdate(identifier, { status: Status.PROCESSED });
       console.log({ file: identifier, log: 'Processed' });
@@ -46,25 +46,12 @@ const processor = async (message) => {
 };
 
 channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-1' });
-channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-2' });
-channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-3' });
-channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-4' });
-channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-5' });
-channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-6' });
-channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-7' });
-channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-9' });
-channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consumer-10' });
 
 const processAtom = async (message) => {
+  const messageContent = JSON.parse(message.content.toString());
   await mongoose.connect(process.env.MONGO);
-  const atom = JSON.parse(message.content.toString('utf8'));
-  const at = new Atom({ ...atom });
-  await at.save();
+  await Atom.insertMany(messageContent);
+  console.log({ log: 'Atoms stored'})
 };
 
-channelWrapper.consume(atomsQueue, processAtom, { noAck: true, consumerTag: 'atom-consumer-' });
-channelWrapper.consume(atomsQueue, processAtom, { noAck: true, consumerTag: 'atom-consumer-2' });
-channelWrapper.consume(atomsQueue, processAtom, { noAck: true, consumerTag: 'atom-consumer-3' });
-channelWrapper.consume(atomsQueue, processAtom, { noAck: true, consumerTag: 'atom-consumer-4' });
-channelWrapper.consume(atomsQueue, processAtom, { noAck: true, consumerTag: 'atom-consumer-5' });
-channelWrapper.consume(atomsQueue, processAtom, { noAck: true, consumerTag: 'atom-consumer-6' });
+channelWrapper.consume(atomsQueue, processAtom, { noAck: true, consumerTag: 'atom-consumer-1' });

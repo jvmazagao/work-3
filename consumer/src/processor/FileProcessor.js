@@ -1,13 +1,13 @@
 const fs = require('fs');
 const readline = require('readline');
 const events = require('events');
-const { File, Status } = require('../domain/File');
 
 const fileProcessor = async (message) => {
-  const { id: identifier, path, name } = message;
+  const { id: identifier, folderPath, name } = message;
   console.log({ file: name, log: 'Starting to processing file' });
+  console.log({ folderPath });
   const reader = readline.createInterface({
-    input: fs.createReadStream(path),
+    input: fs.createReadStream(folderPath.concat(`/${name}`)),
     crlfDelay: Infinity,
   });
   const title = [];
