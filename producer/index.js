@@ -10,10 +10,10 @@ const connection = amqp.connect('amqp://rabbitmq');
 const channelWrapper = connection.createChannel({ json: true });
 const processQueue = 'process_file';
 
-cron.schedule('*/10 * * * * *', async () => {
+cron.schedule('*/30 * * * * *', async () => {
   console.log('running a task every 10 seconds');
   await mongoose.connect(process.env.MONGO);
-  const files = await File.find({ status: Status.PENDING }).limit(5).exec();
+  const files = await File.find({ status: Status.PENDING }).limit(process.env.FILES).exec();
   console.log({ files });
   files.forEach(async (file) => {
     const {
