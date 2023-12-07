@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 const amqp = require('amqp-connection-manager');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
@@ -30,14 +31,15 @@ const processor = async (message) => {
   if (!storedElement) {
     console.log({ file: name, log: 'Element not stored.' });
     try {
-      const mol = new Molecule({ _id: title });
+      const mol = new Molecule({ _id: name, title });
       await mol.save();
       console.log({ file: name, log: 'Send to atom consumer' });
-      const ats = atoms.map((atom) => ({ ...atom, molecule_id: title }));
+      const molecule_id = `${name}-${title}`;
+      const ats = atoms.map((atom) => ({ ...atom, molecule_id }));
       await channelWrapper.sendToQueue(atomsQueue, ats);
       console.log({ file: name, log: 'Element stored' });
       await File.findByIdAndUpdate(identifier, { status: Status.PROCESSED });
-      console.log({ file: identifier, log: 'Processed' });
+      console.log({ file: name, log: 'Processed' });
     } catch (err) {
       console.log({ message: err.message });
       await File.findByIdAndUpdate(identifier, { status: Status.ERROR });
@@ -49,9 +51,10 @@ channelWrapper.consume(queue, processor, { noAck: true, consumerTag: 'file-consu
 
 const processAtom = async (message) => {
   const messageContent = JSON.parse(message.content.toString());
+  const size = messageContent.length;
   await mongoose.connect(process.env.MONGO);
   await Atom.insertMany(messageContent);
-  console.log({ log: 'Atoms stored'})
+  console.log({ log: `${size} atoms stored` });
 };
 
 channelWrapper.consume(atomsQueue, processAtom, { noAck: true, consumerTag: 'atom-consumer-1' });

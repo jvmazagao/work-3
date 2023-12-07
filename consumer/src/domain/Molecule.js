@@ -5,6 +5,10 @@ const moleuculeSchema = new mongoose.Schema({
     type: String,
     require: true,
   },
+  title: {
+    type: String,
+    require: true,
+  },
 }, { timestamps: true });
 
 const Molecule = mongoose.model('Molecule', moleuculeSchema);

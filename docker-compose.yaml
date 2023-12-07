@@ -16,7 +16,7 @@ services:
       context: ./consumer
     environment:
       NODE_ENV: production
-      MONGO: mongodb+srv://work-2:UhGU36nyWmlsz0jz@work-2.n3x6gxb.mongodb.net/
+      MONGO: 
     deploy:
       replicas: 5
     networks: 
@@ -26,11 +26,12 @@ services:
       context: ./producer
     environment:
       NODE_ENV: production
-      MONGO: mongodb+srv://work-2:UhGU36nyWmlsz0jz@work-2.n3x6gxb.mongodb.net/
+      MONGO: 
+      FILES: 10
     networks:
       - rabbitmq_go_net
     deploy:
-      replicas: 1
+      replicas: 2
 
 networks:
   rabbitmq_go_net:

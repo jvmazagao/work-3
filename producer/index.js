@@ -14,8 +14,8 @@ cron.schedule('*/30 * * * * *', async () => {
   console.log('running a task every 10 seconds');
   await mongoose.connect(process.env.MONGO);
   const files = await File.find({ status: Status.PENDING }).limit(process.env.FILES).exec();
-  console.log({ files });
   files.forEach(async (file) => {
+    await File.findByIdAndUpdate(file.id, { status: Status.PROCESSING });
     const {
       id, status, path, name,
     } = file;
@@ -23,6 +23,5 @@ cron.schedule('*/30 * * * * *', async () => {
       id, status, path, name,
     };
     await channelWrapper.sendToQueue(processQueue, archive);
-    await File.findByIdAndUpdate(file.id, { status: Status.PROCESSING });
   });
 });
